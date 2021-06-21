@@ -1,6 +1,12 @@
 //const url="https://www.espncricinfo.com//series/ipl-2020-21-1210595/delhi-capitals-vs-mumbai-indians-final-1237181/full-scorecard";
 const request=require("request");
 const cheerio=require("cheerio");
+const path=require("path");
+const xlsx=require("xlsx");
+const fs=require("fs");
+
+
+
 
 function processScoreCard(url)
 {
@@ -76,12 +82,75 @@ function extractMatchInfo(html)
                let sr= $(allCols[7]).text().trim();
 
                console.log(`${playerName}        ${runs} ${balls} ${fours} ${sixes} ${sr}`);
+               processPlayer(teamName,playerName,runs,balls,fours,sixes,sr,opponentTeamName,venue,date,result);
            }
         }
             
     }
     //console.log(htmlString);
 }
+
+
+function processPlayer(teamName,playerName,runs,balls,fours,sixes,sr,opponentTeamName,venue,date,result)
+{
+    let teamPath=path.join(__dirname,"ipl",teamName);
+    dirCreator(teamPath);
+    let filepath=path.join(teamPath,playerName + ".xlsx");
+   let content= excelReader(filepath,playerName);
+    let playerObj={
+        teamName,
+        playerName,
+        runs,
+        balls,
+        fours,
+        sixes,
+        sr,
+        opponentTeamName,
+        venue,
+        date,
+        result
+    }
+    content.push(playerObj);
+    excelWriter(filepath,content,playerName);
+}
+
+
+
+function dirCreator(filePath)
+{
+    if(fs.existsSync(filePath)==false)
+    {
+        fs.mkdirSync(filePath);
+    }
+
+}
+
+//EXCEl
+
+function excelWriter(filePath,json,sheetName)
+{
+let newWb=xlsx.utils.book_new();
+let newWS=xlsx.utils.json_to_sheet(json);
+xlsx.utils.book_append_sheet(newWb,newWS,sheetName);
+xlsx.writeFile(newWb,filePath);
+}
+
+
+
+
+function excelReader(filePath,sheetName)
+{
+    if(fs.existsSync(filePath)==false)
+    {
+        return [];
+    }
+    let wb=xlsx.readFile(filePath);
+    let excelData=wb.sheets[sheetName];
+    let ans=xlsx.utils.sheet_to_json(excelData);
+    return ans;
+    
+}
+
 
 module.exports={
     ps:processScoreCard
